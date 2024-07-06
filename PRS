@@ -1,0 +1,74 @@
+#============================================
+# calculate ukb frq, in bash
+#============================================
+cd ~/ukbdata/Imputation/bfile/QC2/
+  bfile="QC2_sex_het_chrall"
+  file_out="/home/lijq/example_zhanghy/prs/QC2_sex_het_chrall"
+  ~/share/plink1.9 \
+  --freq \
+  --bfile $bfile \
+  --out $file_out
+  
+#============================================
+# GWAS QC, in R
+#============================================
+library(dplyr)
+
+filter_gwas = function(gwas, frq){
+  df = gwas%>%filter(SNP%in%frq$SNP)
+  df1 = df%>%merge(frq, by=c('SNP', 'A1', 'A2'))
+  df2 = df%>%rename(A1=A2, A2=A1)%>%mutate(BETA=-BETA)%>%merge(frq, by=c('SNP', 'A1', 'A2'))
+  df_out = rbind(df1, df2)%>%select(SNP, CHR, POS, A1, A2, FRQ, BETA, SE, P, N)
+  return(df_out)
+}
+
+# ukb frq
+file_frq = '/home/lijq/example_zhanghy/prs/QC2_sex_het_chrall.frq'
+frq = read.table(file_frq, header=1)%>%rename(FRQ=MAF)%>%select(SNP, A1, A2, FRQ)%>%
+  filter(FRQ>=0.01) # 这里加了个过滤
+
+# clean
+traits = c('UC')
+paths = list('UC'='/data/db/gwas/lijq/PRS/gwas/GI/28067908-GCST004133-EFO_0000729.txt')
+
+for (trait in traits){
+  file_out = sprintf('/home/zhanghy/example_zhanghy/prs/data/%s.txt', trait)
+  gwas = read.delim(paths[[trait]])%>%select(-FRQ)
+  gwas1 = filter_gwas(gwas, frq)
+  print(sprintf('qc on %s, nrow before %.f, after %.f',
+                trait, nrow(gwas), nrow(gwas1)))
+  write.table(gwas1, file_out, row.names=F, quote=F, sep='\t') # 这里应该是gwas1
+}
+
+#============================================
+# PRS, in bash
+#============================================
+cd ~/example_zhanghy/prs
+pthress="5e-2 5e-3 5e-4 5e-5 5e-6 5e-7 5e-8"
+traits="DVT UC AVB"
+bfile="/home/lijq/example_zhanghy/data/1000G_EUR_Phase3_plink/eur" # 检查这个是不是你MR用的bfile， 这里也可以用ukb bfile但是太慢，没必要
+bfile_ukb="/home/lijq/ukbdata/Imputation/bfile/QC2/QC2_sex_het_chrall"
+
+for pthres in $pthress; do
+for trait in $traits; do
+# filter
+awk -v pthres="$pthres" 'NR == 1 || $9 < pthres' data/$trait.txt > data/for_clump/${trait}${pthres} # 这里改回$9
+# clump
+~/share/plink1.9 \
+--bfile $bfile \
+--clump-p1 1 --clump-r2 0.1 --clump-kb 250 \
+--clump data/for_clump/${trait}${pthres} \
+--clump-snp-field SNP --clump-field P \
+--out data/clumped/${trait}${pthres}
+awk 'NR!=1{print $3}' data/clumped/${trait}${pthres}.clumped >  data/clumped/${trait}${pthres}.snp
+# prs
+~/share/plink1.9 \
+--bfile $bfile_ukb \
+--score data/$trait.txt 1 4 7 header \ # 改回 1 4 7
+--extract data/clumped/${trait}${pthres}.snp \
+--out score/${trait}${pthres}.snp
+done; done
+  
+  
+  
+  
