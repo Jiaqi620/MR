@@ -1,0 +1,32 @@
+library(plinkbinr)
+library(ieugwasr)
+library(data.table)
+library(TwoSampleMR)
+library(dplyr)
+
+#读取心血管疾病的文件（结局）
+pathway_disease <- "/data/db/gwas/lijq/p5e-08/greater/CVD/29531354_GCST006906_EFO_0000712_build37.f_modified.tsv.cleaned.tsv.filtered.gz"
+file_disease_raw <- data.table::fread(pathway_disease,header = TRUE)
+#读取肠道疾病文件（暴露）
+file_sig <- data.table::fread("/data/db/gwas/lijq/p5e-08/smaller/GI/fin/fin_K11_APPENDACUT.txt.filtered.gz",header = TRUE)
+file_clump_path <-"/data/db/gwas/lijq/clumped/01_10000kb/GI/fin/fin_K11_APPENDACUT.txt.filtered.clumped"
+dat_clumped = data.table::fread(file_clump_path)
+
+#计算
+# 提取file_sig与 dat_clumped 中的 SNP 匹配的行
+df1_sig = file_sig %>% semi_join(dat_clumped[, 3, with = FALSE], by = c("SNP"))
+# 提取file_disease_raw与dat_clumped 中的 SNP 匹配的行
+df2_disease = file_disease_raw%>% semi_join(dat_clumped[, 3, with = FALSE], by = c("SNP"))
+df1_sig = df1_sig%>%dplyr::rename(pval.exposure=P, effect_allele.exposure=A1, other_allele.exposure=A2,
+                                  samplesize.exposure=N, beta.exposure=BETA, se.exposure=SE, eaf.exposure=FRQ)%>%
+  mutate(id.exposure="fin_K11_APPENDACUT", exposure="APPENDACUT")
+df2_disease <- df2_disease%>%dplyr::rename(pval.outcome=P, effect_allele.outcome=A1, other_allele.outcome=A2,
+                                           samplesize.outcome=N, beta.outcome=BETA, se.outcome=SE, eaf.outcome=FRQ)%>%
+  mutate(id.outcome="29531354_GCST006906",outcome="stroke")
+dat1 = harmonise_data(df1_sig, df2_disease)
+res1 = mr(dat1)
+print(res1)
+names(dat1)
+
+write.csv(res1, "/data/db/gwas/lijq/MR_result/fin/APPENDACUT_29531354_GCST006906_result.csv", row.names = FALSE)
+write.csv(dat1, "/data/db/gwas/lijq/MR_result/fin/APPENDACUT_29531354_GCST006906_hormones.csv", row.names = FALSE)
