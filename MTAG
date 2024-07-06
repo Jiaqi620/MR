@@ -1,0 +1,53 @@
+library(data.table)
+# 指定文件路径
+file_path <- "/data/db/gwas/lijq/cleaned/CVD/fin_I9_AVBLOCK.txt.gz"
+data1 <- fread(file_path, header = TRUE)
+head(data1)
+# 重命名列名
+setnames(data1, old = c("SNP", "CHR", "POS", "A1", "A2", "FRQ", "BETA", "SE", "P", "N"),
+               new = c("snpid", "chr", "bpos", "a1", "a2", "freq", "beta", "se", "pval", "n"))
+# 计算z值
+data1$z <- data1$beta / data1$se
+head(data1)
+# 提取指定列
+selected_columns <- data1[, c("snpid", "chr", "bpos", "a1", "a2", "freq", "z", "pval", "n")]
+# 显示结果
+head(selected_columns)
+# 指定保存文件路径
+output_file <- "/data/db/gwas/lijq/MTAG/fin_I9_AVBLOCK.txt"
+fwrite(selected_columns, output_file, sep = "\t", quote = FALSE)
+sum(selected_columns$pval < 5e-8)
+
+# trait 2
+file_path <- "/data/db/gwas/lijq/cleaned/GI/28067908-GCST004133-EFO_0000729-build37.f_modified.cleaned.txt.gz"
+data2 <- fread(file_path, header = TRUE)
+head(data2)
+# 重命名列名
+setnames(data2, old = c("SNP", "CHR", "POS", "A1", "A2", "FRQ", "BETA", "SE", "P", "N"),
+               new = c("snpid", "chr", "bpos", "a1", "a2", "freq", "beta", "se", "pval", "n"))
+# 计算z值
+data2$z <- data2$beta / data2$se
+#data2$z <- qnorm(1 - data2$pval / 2)
+head(data2)
+# 提取指定列
+selected_columns1 <- data2[, c("snpid", "chr", "bpos", "a1", "a2", "freq", "z", "pval", "n")]
+head(selected_columns1)
+output_file <- "/data/db/gwas/lijq/MTAG/28067908-GCST004133_UC.txt"
+fwrite(selected_columns1, output_file, sep = "\t", quote = FALSE)
+
+
+source /home/zhanghy/anaconda3/etc/profile.d/conda.sh
+conda activate py27
+
+cd mtag
+conda activate py27
+
+file_gwas1="/data/db/gwas/lijq/MTAG/fin_I9_ATHSCLE.txt"
+file_gwas2="/data/db/gwas/lijq/MTAG/GWAS_summary_DD.txt"
+file_out="/data/db/gwas/lijq/MTAG/result/ATHSCLE_DD"
+
+./mtag.py \
+--ld_ref_panel /data/db/gwas/lijq/MTAG/1000g_ldscore_hg19/eur_w_ld_chr/ \
+--sumstats $file_gwas1,$file_gwas2 --out $file_out \
+--equal_h2 --perfect_gencov --n_min 0.0 \
+--stream_stdout 
