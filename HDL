@@ -1,0 +1,140 @@
+install.packages("renv")
+library(renv)
+renv::init()
+renv::snapshot()
+renv::restore()
+install.packages("packrat")
+packrat::init()
+packrat::snapshot()
+packrat::restore()
+
+# R 4.3.2, with HDL: 1.4.0
+wget https://cran.r-project.org/src/base/R-4/R-4.3.2.tar.gz
+tar -xzvf R-4.3.2.tar.gz
+cd R-4.3.2
+./configure
+make
+sudo make install
+
+sudo apt-get install libreadline-dev
+
+# measure heritability, and genetic correlation based on GWAS summary
+# install
+git clone https://github.com/zhenin/HDL
+cd HDL
+Rscript HDL.install.R
+
+# download ref panel
+wget https://www.dropbox.com/s/6js1dzy4tkc3gac/UKB_imputed_SVD_eigen99_extraction.tar.gz?e=2 
+--no-check-certificate -O ./UKB_imputed_SVD_eigen99_extraction.tar.gz
+
+# download and process demo gwas
+file_gwas1="20002_1223.gwas.imputed_v3.both_sexes.tsv.bgz"
+file_gwas2="20022_irnt.gwas.imputed_v3.both_sexes.tsv.bgz"
+path_ld="~/soft/HDL/UKB_imputed_SVD_eigen99_extraction"
+
+wget https://www.dropbox.com/s/web7we5ickvradg/${file_gwas1}?dl=0 -O $file_gwas1
+wget https://www.dropbox.com/s/web7we5ickvradg/${file_gwas2}?dl=0 -O $file_gwas2
+
+
+Rscript HDL.data.wrangling.R \
+gwas.file=$file_gwas1 LD.path=$path_ld GWAS.type=UKB.Neale \
+output.file=gwas1 log.file=gwas1
+
+Rscript HDL.data.wrangling.R \
+gwas.file=$file_gwas1 LD.path=$path_ld GWAS.type=UKB.Neale \
+output.file=gwas2 log.file=gwas2
+
+setwd("~/soft/HDL")
+#Run HDL:
+library('HDL')
+file_gwas1 <- 'gwas1.hdl.rds'
+file_gwas2 <- 'gwas2.hdl.rds'
+path_LD <- "UKB_imputed_SVD_eigen99_extraction"
+
+gwas1.df <- readRDS(file_gwas1)
+gwas2.df <- readRDS(file_gwas2)
+
+res.HDL <- HDL.rg(gwas1.df, gwas2.df, path_LD)
+res.HDL
+
+
+#暴露
+file_path <- "/bigdat/db/gwas/lijq/cleaned/GI/GWAS_summary_1-23.dosages.maf_0.01.info_0.4.cleaned.tsv.gz"
+data1 <- fread(file_path, header = TRUE)
+head(data1)
+# 重命名列名
+setnames(data1, old = c("SNP", "CHR", "POS", "A1", "A2", "FRQ", "BETA", "SE", "P", "N"),
+               new = c("SNP", "CHR", "POS", "A1", "A2", "FRQ", "b", "se", "pval", "N"))
+# 计算z值
+data1$Z <- data1$b / data1$se
+#data2$z <- qnorm(1 - data2$pval / 2)
+head(data1)
+# 提取指定列
+selected_columns1 <- data1[, c("SNP", "A1", "A2",  "b", "se", "N", "Z")]
+# 显示结果
+head(selected_columns1)
+output_file <- "/bigdat/db/gwas/lijq/HDL/GWAS_summary_1-23.rds"
+saveRDS(selected_columns1, file = output_file)
+
+#结局
+file_path <- "/bigdat/db/gwas/lijq/cleaned/CVD/fin_I9_ATHSCLE.txt.gz"
+data2 <- fread(file_path, header = TRUE)
+head(data2)
+# 重命名列名
+setnames(data2, old = c("SNP", "CHR", "POS", "A1", "A2", "FRQ", "BETA", "SE", "P", "N"),
+               new = c("SNP", "CHR", "POS", "A1", "A2", "FRQ", "b", "se", "pval", "N"))
+head(data2)
+# 计算z值
+data2$Z <- data2$b / data2$se
+#data2$z <- qnorm(1 - data2$pval / 2)
+head(data2)
+# 提取指定列
+selected_columns2 <- data2[, c("SNP", "A1", "A2",  "b", "se", "N", "Z")]
+# 显示结果
+head(selected_columns2)
+# 定义保存RDS文件的路径
+output_path <- "/bigdat/db/gwas/lijq/HDL/fin_I9_ATHSCLE.rds"
+# 保存selected_columns1对象为RDS文件
+saveRDS(selected_columns2, file = output_path)
+
+
+file_gwas1 <- '/bigdat/db/gwas/lijq/HDL/GWAS_summary_1-23.rds'
+file_gwas2 <- '/bigdat/db/gwas/lijq/HDL/fin_I9_ATHSCLE.rds'
+path_LD <- "~/soft/HDL/UKB_imputed_SVD_eigen99_extraction"
+
+gwas1.df <- readRDS(file_gwas1)
+gwas2.df <- readRDS(file_gwas2)
+
+res.HDL <- HDL.rg(gwas1.df, gwas2.df, path_LD)
+res.HDL
+
+# 设置保存RDS文件的路径
+output_path <- "/bigdat/db/gwas/lijq/HDL_result/HDL_results_DD_ATHSCLE.rds"
+saveRDS(res.HDL, file = output_path)
+# 读取保存的RDS文件
+loaded_HDL <- readRDS(output_path)
+# 输出读取的对象，确认其内容
+print(loaded_HDL)
+
+# 提取数据
+# 创建数据框，只给遗传相关性赋予P值
+data <- data.frame(
+  Trait = c("Heritability_1", "Heritability_2", "Genetic_Covariance", "Genetic_Correlation"),
+  Estimate = c(res.HDL$estimates.df["Heritability_1", "Estimate"],
+               res.HDL$estimates.df["Heritability_2", "Estimate"],
+               res.HDL$estimates.df["Genetic_Covariance", "Estimate"],
+               res.HDL$estimates.df["Genetic_Correlation", "Estimate"]),
+  SE = c(res.HDL$estimates.df["Heritability_1", "se"],
+         res.HDL$estimates.df["Heritability_2", "se"],
+         res.HDL$estimates.df["Genetic_Covariance", "se"],
+         res.HDL$estimates.df["Genetic_Correlation", "se"]),
+  P_Value = c(NA, NA, NA, ifelse("P" %in% names(res.HDL), res.HDL$P, NA))
+)
+
+# 检查数据框
+print(data)
+
+# 保存为 CSV 文件
+write.csv(data, "/bigdat/db/gwas/lijq/HDL_result/HDL_results_DD_ATHSCLE.csv", row.names = FALSE)
+
