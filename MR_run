@@ -1,0 +1,133 @@
+# 读取暴露文件名列表
+
+library(data.table)
+library(dplyr)
+library(TwoSampleMR)
+
+# 读取文件
+exposure_clump_files <- data.table::fread("/data/db/gwas/lijq/clumped/01_10000kb/GI/fin/info_clump.csv", header = FALSE)
+exposure_files <- data.table::fread("/data/db/gwas/lijq/p5e-08/smaller/GI/fin/info_GI.csv", header = FALSE)
+outcome_files <- data.table::fread("/data/db/gwas/lijq/p5e-08/greater/CVD/info_cvd.csv", header = FALSE)
+
+# 基础路径
+base_path_exposure <- "/data/db/gwas/lijq/p5e-08/smaller/GI/fin"
+base_path_outcome <- "/data/db/gwas/lijq/p5e-08/greater/CVD"
+base_path_exposure_clump <- "/data/db/gwas/lijq/clumped/01_10000kb/GI/fin"
+
+# 初始化结果存储列表
+harmonise_result_list <- list()
+res1_result_list <- list()
+results_directory <- "/data/db/gwas/lijq/MR_result/fin"  # 结果文件的存储目录
+
+# 确保结果目录存在
+if (!dir.exists(results_directory)) {
+  dir.create(results_directory, recursive = TRUE)
+}
+
+# 初始化计数器
+result_count <- 0
+
+# 遍历每个暴露文件和结局文件
+for (exposure_index in seq_along(exposure_files$V1)) {
+  for (outcome_index in seq_along(outcome_files$V1)) {
+    tryCatch({
+      # 构建文件路径
+      exposure_file <- file.path(base_path_exposure, exposure_files$V1[exposure_index])
+      outcome_file <- file.path(base_path_outcome, outcome_files$V1[outcome_index])
+      clump_file <- file.path(base_path_exposure_clump, gsub(".txt.filtered.gz$", ".txt.filtered.clumped", exposure_files$V1[exposure_index]))
+      
+      # 检查文件是否存在
+      if (!file.exists(exposure_file) || !file.exists(outcome_file) || !file.exists(clump_file)) {
+        stop("One or more files do not exist: ", exposure_file, ", ", outcome_file, ", ", clump_file)
+      }
+      
+      # 读取数据文件
+      file_sig <- data.table::fread(exposure_file, header = TRUE)
+      dat_clumped <- data.table::fread(clump_file, header = TRUE)
+      file_disease_raw <- data.table::fread(outcome_file, header = TRUE)
+      
+      # 基于SNP列匹配行
+      df1_sig <- file_sig[dat_clumped, on = "SNP", nomatch = 0]
+      df2_disease <- file_disease_raw[dat_clumped, on = "SNP", nomatch = 0]
+      
+      # 重命名列并添加新列
+      df1_sig <- df1_sig %>%
+        dplyr::rename(
+          pval.exposure = P, 
+          effect_allele.exposure = A1, 
+          other_allele.exposure = A2,
+          samplesize.exposure = N, 
+          beta.exposure = BETA, 
+          se.exposure = SE, 
+          eaf.exposure = FRQ
+        ) %>%
+        dplyr::mutate(id.exposure = exposure_files$V1[exposure_index], exposure = "GI")
+      
+      df2_disease <- df2_disease %>%
+        dplyr::rename(
+          pval.outcome = P, 
+          effect_allele.outcome = A1, 
+          other_allele.outcome = A2,
+          samplesize.outcome = N, 
+          beta.outcome = BETA, 
+          se.outcome = SE, 
+          eaf.outcome = FRQ
+        ) %>%
+        dplyr::mutate(id.outcome = outcome_files$V1[outcome_index], outcome = "CAD")
+      
+      # 整合数据并进行 Mendelian Randomization 分析
+      dat1 <- harmonise_data(df1_sig, df2_disease)
+      res1 <- mr(dat1)
+      
+      # 打印结果
+      print(res1)
+      result_count <- result_count + 1
+      print(paste("Result count:", result_count))
+      
+      # 生成唯一文件名并保存结果
+      file_name <- gsub(".txt.filtered.gz", "", basename(exposure_files$V1[exposure_index])) %>% 
+        paste0("_on_", gsub(".txt.filtered.gz", "", basename(outcome_files$V1[outcome_index])), ".csv")
+      file_path <- file.path(results_directory, file_name)
+      write.csv(res1, file_path, row.names = FALSE)
+      print(paste("Result saved to:", file_path))
+      
+    }, error = function(e) {
+      cat("Error with files:", exposure_file, "and", outcome_file, "\nError message:", e$message, "\n\n")
+    })
+  }
+}
+
+library(data.table)
+
+# 设置文件目录路径
+folder_path <- "/data/db/gwas/lijq/MR_result/fin/"
+
+# 获取该目录下所有 CSV 文件的路径
+file_paths <- list.files(folder_path, pattern = "\\.csv$", full.names = TRUE)
+
+# 使用 lapply 读取所有文件，并使用 rbindlist 合并，同时设置 fill=TRUE 来处理列数不一致的问题
+all_data <- rbindlist(lapply(file_paths, fread), fill = TRUE)
+
+# 查看合并后的数据
+print(head(all_data))
+
+
+# 如果需要，可以保存合并后的数据到一个新的 CSV 文件
+write.csv(all_data, file = "/data/db/gwas/lijq/MR_result/fin/finGI_CVD_combined.csv", row.names = FALSE)
+
+
+
+library(data.table)
+# 合并harmonise结果
+harmonise_combined_result <- rbindlist(harmonise_result_list, use.names = TRUE, fill = TRUE)
+# 合并MR分析结果
+res1_combined_result <- rbindlist(res1_result_list, use.names = TRUE, fill = TRUE)
+nrow(res1_combined_result)
+
+# 存储路径
+harmonise_result_path <- "/data/db/gwas/lijq/MR_result/finGI_CVD_harmonise_result.csv"
+res1_result_path <- "/data/db/gwas/lijq/MR_result/finGI_CVD_res1_result.csv"
+
+# 输出结果
+write.csv(harmonise_combined_result, file = harmonise_result_path, row.names = FALSE)
+write.csv(res1_combined_result, file = res1_result_path, row.names = FALSE)
