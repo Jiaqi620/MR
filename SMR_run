@@ -1,0 +1,340 @@
+#1. AVBLOCK_UC_Heart
+CVD_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/CVD"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+
+# 确保输出目录存在
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${CVD_DIR}/Heart_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/mysmr_DVT_UC_Heart_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/DVT_UC_mtag_meta.txt \
+--beqtl-summary ${CVD_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+#2. AVBLOCK_UC—_Intestine
+CVD_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/GI"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+
+# 确保输出目录存在
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${CVD_DIR}/GI_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/mysmr_DVT_UC_Intestine_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/DVT_UC_mtag_meta.txt \
+--beqtl-summary ${CVD_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+#3. AVBLOCK_UC_Blood
+CVD_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/blood"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+
+# 确保输出目录存在
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${CVD_DIR}/Whole_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/mysmr_DVT_UC_Blood_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/DVT_UC_mtag_meta.txt \
+--beqtl-summary ${CVD_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+
+#4. AVBLOCK_Heart
+CVD_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/CVD"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+
+# 确保输出目录存在
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${CVD_DIR}/Heart_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/mysmr_DVT_Heart_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/fin_PHLETHROMBDVTLOW.txt \
+--beqtl-summary ${CVD_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+#5. DD_Intestine
+CVD_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/GI"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+
+# 确保输出目录存在
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${CVD_DIR}/GI_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/mysmr_UC_Intestine_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/28067908-GCST004133.txt \
+--beqtl-summary ${CVD_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+#6. DD_Blood
+CVD_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/blood"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+
+# 确保输出目录存在
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${CVD_DIR}/Whole_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/mysmr_UC_Blood_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/28067908-GCST004133.txt \
+--beqtl-summary ${CVD_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+#7. AVBLOCK_Blood
+CVD_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/blood"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+
+# 确保输出目录存在
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${CVD_DIR}/Whole_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/mysmr_DVT_Blood_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/fin_PHLETHROMBDVTLOW.txt \
+--beqtl-summary ${CVD_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+
+/data/db/smr/GTEx_V8_cis_eqtl_summary
+
+#8. CVD_GI_all
+CVD_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/all_tissue"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+
+# 确保输出目录存在
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${CVD_DIR}/all_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/UC_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/28067908-GCST004133.txt \
+--beqtl-summary ${CVD_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+#9. AVBLOCK_all
+CVD_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/all_tissue"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+
+# 确保输出目录存在
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${CVD_DIR}/all_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/AVBLOCK_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/fin_I9_AVBLOCK.txt \
+--beqtl-summary ${CVD_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+#10. GI_all
+CVD_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/all_tissue"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+
+# 确保输出目录存在
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${CVD_DIR}/all_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/AVBLOCK_UC_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/AVBLOCK_UC_mtag_meta.txt \
+--beqtl-summary ${CVD_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+#11. CVD_GI_all
+CVD_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/all_tissue"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+
+# 确保输出目录存在
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${CVD_DIR}/all_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/ATHSCLE_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/fin_I9_ATHSCLE.txt \
+--beqtl-summary ${CVD_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+#12. AVBLOCK_all
+CVD_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/all_tissue"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+
+# 确保输出目录存在
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${CVD_DIR}/all_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/DD_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/GWAS_summary_1-23_clean.txt \
+--beqtl-summary ${CVD_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+#13. GI_all
+CVD_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/all_tissue"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+
+# 确保输出目录存在
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${CVD_DIR}/all_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/ATHSCLE_DD_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/ATHSCLE_DD_mtag_meta.txt \
+--beqtl-summary ${CVD_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+#11. CVD_GI_all
+CVD_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/all_tissue"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+
+# 确保输出目录存在
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${CVD_DIR}/all_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/DVT_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/fin_PHLETHROMBDVTLOW.txt \
+--beqtl-summary ${CVD_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+
+#13. GI_all
+CVD_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/all_tissue"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+
+# 确保输出目录存在
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${CVD_DIR}/all_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/DVT_UC_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/DVT_UC_mtag_meta.txt \
+--beqtl-summary ${CVD_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+
+# 定义文件夹路径
+path <- "/data/db/gwas/lijq/SMR/result"
+# 列出所有以"ATHSCLE_all_"开头且以".smr"结尾的文件
+files <- list.files(path, pattern = "^DVT_UC_all_.*\\.smr$", full.names = TRUE)
+# 初始化一个空的数据框来存储合并后的数据
+all_data <- data.frame()
+
+# 读取并合并文件
+for (file in files) {
+  # 读取文件
+  temp_data <- read.csv(file, sep = "\t", header = TRUE)  # 根据实际的分隔符和文件格式调整read.csv的参数
+  
+  # 添加来源文件名的列
+  temp_data$SourceFile <- basename(file)
+  
+  # 合并到总数据框
+  all_data <- rbind(all_data, temp_data)
+}
+head(all_data)
+
+library(dplyr)  # 确保加载 dplyr 包
+
+all_data <- all_data %>%
+  mutate(p_SMR_FDR = p.adjust(p_SMR, method = "BH"))
+write.csv(all_data, "/data/db/gwas/lijq/SMR/result/combine/DVT_UC_alltissues_alldata.csv", row.names = FALSE)
+
+filtered_data <- all_data %>%
+  filter(nsnp_HEIDI > 10 & p_HEIDI > 0.01 & p_SMR_FDR < 0.05)
+# 查看筛选后的数据框头部数据
+head(filtered_data)
+
+# 如果需要，可以将结果保存为CSV文件
+write.csv(filtered_data, "/data/db/gwas/lijq/SMR/result/combine/DVT_UC_alltissues_filtered.csv", row.names = FALSE)
+
