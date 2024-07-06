@@ -1,0 +1,126 @@
+library(data.table)
+directory <- "/data/db/gwas/lijq/MR_CVDonGI_result/"
+# 获取所有以_harmonise_result.csv结尾的文件
+files <- list.files(directory, pattern = "_harmonise_result.csv$", full.names = TRUE)
+# 使用lapply读取所有文件并存储为data.table
+data_list <- lapply(files, fread)
+# 合并所有的数据表
+merged_data <- rbindlist(data_list)
+# 保存合并后的数据到新的CSV文件
+fwrite(merged_data, file = "/data/db/gwas/lijq/MR_CVDonGI_result/merged_harmonise_results_10000kb.csv")
+
+directory <- "/data/db/gwas/lijq/MR_CVDonGI_result/"
+# 获取所有以_harmonise_result.csv结尾的文件
+files <- list.files(directory, pattern = "_res1_result.csv$", full.names = TRUE)
+# 使用lapply读取所有文件并存储为data.table
+data_list <- lapply(files, fread)
+# 合并所有的数据表
+merged_data1 <- rbindlist(data_list)
+# 使用 rbindlist() 并设置 fill = TRUE 来自动填充缺失的列为 NA
+merged_data1 <- data.table::rbindlist(data_list, fill = TRUE)
+# 保存合并后的数据到新的CSV文件
+fwrite(merged_data1, file = "/data/db/gwas/lijq/MR_CVDonGI_result/merged_res_results0.01_10000kb.csv")
+
+
+library(ggplot2)
+#用harmonise_data 执行 mr_pleiotropy_test 计算
+data_path <- "/data/db/gwas/lijq/MR_result/fin/APPENDACUT_29531354_GCST006906_hormones.csv"
+filtered_data <- read.csv(data_path)
+filtered_data <- data %>%
+  filter(grepl("GCST90255675", id.outcome) & grepl("fin_I9_CHD", id.exposure))
+print(filtered_data)
+
+# 假设get_r_from_bsen正确计算了R值
+filtered_data <- mutate(filtered_data, R = get_r_from_bsen(filtered_data$beta.exposure,
+                                                           filtered_data$se.exposure, 
+                                                           filtered_data$samplesize.exposure))
+# 计算F值
+filtered_data <- mutate(filtered_data, F = (samplesize.exposure - 2) * (R^2 / (1 - R^2)))
+table(filtered_data$F)
+# 保存结果
+output_path <- "/data/db/gwas/lijq/MR_CVDonGI_result/Fvalue_IHD_EA.csv"
+write.csv(filtered_data, output_path, row.names = FALSE)
+
+# 执行多效性检测
+pleiotropy_results <- mr_pleiotropy_test(filtered_data)
+print(pleiotropy_results)
+#异质性检验
+heterogeneity_results <- mr_heterogeneity(filtered_data)
+print(heterogeneity_results)
+#运行MR-PRESSO检验
+mr_presso_results <- run_mr_presso(filtered_data)
+print(mr_presso_results)
+# 初始化一个空的数据框来收集结果
+presso_results_df <- data.frame()
+for (i in seq_along(mr_presso_results)) {
+  main_MR_CVDonGI_results <- mr_presso_results[[i]]$`Main MR results`
+  # 提取MR-PRESSO全局测试结果
+  global_test <- mr_presso_results[[i]]$`MR-PRESSO results`$`Global Test`
+  # 合并数据和添加额外信息
+  temp_df <- data.frame(
+    Exposure = main_MR_CVDonGI_results$Exposure,
+    MR_Analysis = main_MR_CVDonGI_results$`MR Analysis`,
+    Causal_Estimate = main_MR_CVDonGI_results$`Causal Estimate`,
+    Sd = main_MR_CVDonGI_results$Sd,
+    T_stat = main_MR_CVDonGI_results$`T-stat`,
+    P_value = main_MR_CVDonGI_results$`P-value`,
+    RSSobs = global_test$RSSobs,
+    Global_Pvalue = global_test$Pvalue,
+    Exposure_ID = attr(mr_presso_results, "id.exposure")[i],
+    Outcome_ID = attr(mr_presso_results, "id.outcome")[i],
+    Exposure_Label = attr(mr_presso_results, "exposure")[i],
+    Outcome_Label = attr(mr_presso_results, "outcome")[i]
+  )
+  
+  presso_results_df <- rbind(presso_results_df, temp_df)
+}
+print(presso_results_df)
+
+# Cochran's Q test for heterogeneity
+cochrans_q_test_results <- heterogeneity_results$Q
+print(cochrans_q_test_results)
+library(metafor)
+# 假设 effect_size 是效应大小，variance 是方差
+filtered_data$variance <- filtered_data$se.exposure^2
+res_cochrans <- rma(yi = beta.exposure, vi = variance, data = filtered_data)
+print(res_cochrans)
+# 提取res_cochrans对象中的重要数据
+cochrans_results_df <- data.frame(
+  Estimate = res_cochrans$beta,
+  SE = res_cochrans$se,
+  zValue = res_cochrans$zval,
+  pValue = res_cochrans$pval,
+  CI.Lower = res_cochrans$ci.lb,
+  CI.Upper = res_cochrans$ci.ub
+)
+print(cochrans_results_df)
+#Model Results：Estimate = 0.0019：这是效应大小的估计值。SE = 0.0125：估计值的标准误。Z-value = 0.1491：用于检验零假设（效应大小为0）的z统计量。
+#P-value = 0.8814：p值非常高，表明没有足够证据拒绝零假设，即我们不能确认有显著的效应存在。
+# CI = [-0.0227, 0.0264]：估计值的95%置信区间，包括了0，进一步支持了效应大小不显著的结论。
+
+# 将所有结果保存为CSV文件
+results_list <- list(
+  pleiotropy = pleiotropy_results, # 确保这也是一个数据框
+  heterogeneity = heterogeneity_results, # 确保这也是一个数据框
+  cochran_q = cochrans_results_df,
+  mr_presso = presso_results_df # 确保MR-PRESSO的输出也是数据框格式
+)
+
+# 每个结果保存到单独的CSV文件
+lapply(names(results_list), function(x) {
+  write.csv(results_list[[x]], paste0("/data/db/gwas/lijq/MR_CVDonGI_result/", x, "_ATHSCLE_EA.csv"))
+})
+library(ggplot2)
+setwd("/data/db/gwas/lijq/plot")
+ggsave("mr_scatter_VTE_DD.png", plot = last_plot(), width = 10, height = 8, dpi = 300)
+mr_scatter_plot(MR_CVDonGI_results = mr(filtered_data, method_list = c("mr_ivw","mr_weighted_median","mr_egger_regression")), filtered_data) 
+dev.off()
+
+ggsave("mr_leaveoneout_VTE_DD.png", plot = last_plot(), width = 10, height = 8, dpi = 300)
+mr_leaveoneout_plot(leaveoneout_results = mr_leaveoneout(filtered_data))
+dev.off()
+
+#计算R的平方和F统计量
+library(TwoSampleMR)
+library(dplyr)
+
