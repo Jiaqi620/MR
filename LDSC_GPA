@@ -1,0 +1,53 @@
+#overall genetic overlap
+#install.packages("devtools")
+#library(devtools)
+#install_github("dongjunchung/GPA")
+library(dplyr)
+library("GPA")
+
+#R 4.2.3, with GPA: 1.10.0, dplyr: 1.1.4
+
+
+file1 <- '/bigdat/db/gwas/lijq/cleaned/GI/GWAS_summary_1-23.dosages.maf_0.01.info_0.4.cleaned.tsv.gz'
+file2 <- '/bigdat/db/gwas/lijq/cleaned/CVD/fin_I9_ATHSCLE.txt.gz'
+
+df1 <- read.table(file1,header=T)%>%select('SNP', 'P')
+df2 <- read.table(file2,header=T)%>%select('SNP', 'P')
+
+df <- inner_join(df1,df2,by='SNP')
+fit.GPA.noAnn <- GPA(df[,2:3],NULL)
+fit.GPA.pleiotropy.H0 <- GPA(df[,2:3], NULL, pleiotropyH0=TRUE)
+test.GPA.pleiotropy <- pTest(fit.GPA.noAnn, fit.GPA.pleiotropy.H0)
+
+test.GPA.pleiotropy
+test_GPA_pleiotropy_df <- as.data.frame(test.GPA.pleiotropy)
+write.csv(test_GPA_pleiotropy_df, "/bigdat/db/gwas/lijq/GPA/test_GPA_pleiotrop_DD_ATHSCLE.csv", row.names = FALSE)
+
+
+#UC_AVBLOCK
+file1 <- '/bigdat/db/gwas/lijq/cleaned/GI/28067908-GCST004133-EFO_0000729-build37.f_modified.cleaned.tsv.gz'
+file2 <- '/bigdat/db/gwas/lijq/cleaned/CVD/fin_I9_AVBLOCK.txt.gz'
+
+df1 <- read.table(file1,header=T)%>%select('SNP', 'P')
+df2 <- read.table(file2,header=T)%>%select('SNP', 'P')
+
+df <- inner_join(df1,df2,by='SNP')
+fit.GPA.noAnn <- GPA(df[,2:3],NULL)
+fit.GPA.pleiotropy.H0 <- GPA(df[,2:3], NULL, pleiotropyH0=TRUE)
+test.GPA.pleiotropy <- pTest(fit.GPA.noAnn, fit.GPA.pleiotropy.H0)
+
+test.GPA.pleiotropy
+
+# 首先将结果转换为数据框（如果不是数据框）
+test_GPA_pleiotropy_df <- as.data.frame(test.GPA.pleiotropy)
+
+# 导出为 CSV 文件
+write.csv(test_GPA_pleiotropy_df, "/bigdat/db/gwas/lijq/GPA/GPA_pleiotropy_UC_AVBLOCK.csv", row.names = FALSE)
+
+
+  nohup Rscript /bigdat/db/gwas/lijq/code/GPA_GORD_30061737.r>output_GORD.log  2>&1 &
+  nohup Rscript /bigdat/db/gwas/lijq/code/IBS_fin_I9_AF.r>output_IBS.log  2>&1 &
+  nohup Rscript /bigdat/db/gwas/lijq/code/GPA_PUD_26343387.r>output_PUD.log  2>&1 &
+  nohup Rscript /bigdat/db/gwas/lijq/code/GPA_DD_ATHSCLE.r>output_DD.log  2>&1 &
+  nohup Rscript /bigdat/db/gwas/lijq/code/GPA_UC_DVT.r>output_UC2.log  2>&1 &
+  nohup Rscript /bigdat/db/gwas/lijq/code/GPA_UC_AVBLOCK.r>output_uc1.log  2>&1 &
