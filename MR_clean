@@ -1,0 +1,279 @@
+#=================================================================================
+## clean_prepare.r
+file_frq = '/data/db/sldsc_ref/1000G_EUR_Phase3_plink/eur_nomhc_maf0.01.frq'
+get_1000gfrq = function(){
+  frq = read.table(file_frq, header=1)%>%rename(FRQ=MAF)%>%select(SNP, A1, A2, FRQ)
+  return(frq)
+}
+frq = get_1000gfrq()
+# filter gwas to 1000g ref, remove mhc, snp with maf < 0.01, map a1 a2.
+filter_gwas = function(gwas, frq){
+  df = gwas%>%filter(SNP%in%frq$SNP)
+  df1 = df%>%merge(frq, by=c('SNP', 'A1', 'A2'))
+  df2 = df%>%rename(A1=A2, A2=A1)%>%mutate(BETA=-BETA)%>%merge(frq, by=c('SNP', 'A1', 'A2'))
+  df_out = rbind(df1, df2)%>%select(SNP, CHR, POS, A1, A2, FRQ, BETA, SE, P, N)
+  return(df_out)
+}
+head(frq)
+
+uid = ifelse(file.exists('/home/zhang'), 'zhang', 'zhanghy')
+source(paste0('/home/', uid, '/easymr/code/db_gwas/prepare.r'))
+#=================================================================================
+# 单个处理
+library(data.table)
+file_path <- "/data/db/gwas/lijq/p5e-08/smaller/GI/fin/fin_K11_APPENDACUT.txt.filtered.gz"
+# 使用fread读取.gz文件
+gwas <- fread(cmd = paste("gunzip -c", file_path))
+head(gwas)
+gwas$A1 <- toupper(gwas$A1)
+gwas$A2 <- toupper(gwas$A2)
+# Sort the gwas data frame by the P column in ascending order
+sorted_gwas <- gwas %>% 
+  arrange(P)
+head(sorted_gwas, 10)
+nrow(gwas)
+library(dplyr)
+# 重命名列并删除INFO列
+gwas <- gwas %>%
+  rename(POS = BP, A1 = ALLELE1, A2 = ALLELE0, FRQ = A1FREQ) %>%
+  select(-INFO)
+gwas <- gwas %>%select(-ci_upper)
+# 为gwas数据框添加N列，所有行的值都填充为451052
+gwas$N <- 451052
+# 查看结果
+head(gwas)
+names(gwas)
+# 查看前几行
+head(df_out)
+#填充SNP
+# Set the file path
+bim_file_path <- "/data/db/sldsc_ref/1000G_EUR_Phase3_plink/eur.bim"
+bim_data <- read.table(bim_file_path, header = FALSE, sep = "\t", col.names = c("CHR", "SNP", "GEN_DIST", "POS", "A1", "A2"))
+head(bim_data)
+
+matched_data <- merge(gwas, bim_data, by = c("CHR", "POS", "A1", "A2"))
+head(matched_data)
+#整理列名
+matched_data <- matched_data %>% select(-SNP.x, -GEN_DIST)
+matched_data <- matched_data %>% rename(SNP = SNP.y)
+matched_data <- matched_data %>% select(SNP, CHR, POS, A1, A2, FRQ, BETA, SE, P, N)
+head(matched_data)
+
+gwas <- matched_data
+head(gwas)
+df = gwas%>%filter(SNP%in%frq$SNP)
+df1 = df%>%merge(frq, by=c('SNP', 'A1', 'A2'))
+df2 = df%>%rename(A1=A2, A2=A1)%>%mutate(BETA=-BETA)%>%merge(frq, by=c('SNP', 'A1', 'A2'))
+df_out = rbind(df1, df2)%>%select(SNP, CHR, POS, A1, A2, FRQ.y, BETA, SE, P, N)
+df_out <- df_out %>% rename(FRQ = FRQ.y)
+head(df_out)
+
+sorted_df_out <- df_out %>% 
+  arrange(P)
+head(sorted_df_out, 10)
+#填充CHR POS
+# Performing the left join to match SNPs and bring CHR and POS from bim_data
+df_out <- df_out %>%
+  left_join(bim_data, by = "SNP", suffix = c("", ".bim")) %>%
+  mutate(
+    CHR = if_else(is.na(CHR), CHR.bim, CHR),
+    POS = if_else(is.na(POS), POS.bim, POS)
+  ) %>%
+  select(-matches("\\.bim$"))  # Removing the temporary columns from bim_data
+df_out <- df_out %>% select(-GEN_DIST)
+head(df_out)
+df_out <- df_out %>%select(-GEN_DIST)
+nrow(df_out)
+na_columns <- sapply(df_out, anyNA)
+na_columns
+
+# 指定文件路径和名称
+output_path <- "/data/db/gwas/lijq/cleaned/CVD/fin_I9_AVBLOCK_0528.txt"
+write.table(df_out, file = output_path, sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+gz_output_path <- paste0(output_path, ".gz")
+gzcmd <- paste("gzip", output_path)
+system(gzcmd) # 执行gzip命令
+
+# 或者，直接写入.gz文件（选择性使用，取决于你的需求）
+# write.table(df_out, gzfile(gz_output_path), sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+#=================================================================================
+#循环处理
+# 定义输入和输出目录
+file_in <- "/data/db/gwas/lijq/modified_N/CVD"
+file_out_dir <- "/data/db/gwas/lijq/cleaned"
+# 确保输出目录存在
+library(data.table)
+library(dplyr)
+
+gwas <- fread(file_path)
+df = gwas%>%filter(SNP%in%frq$SNP)
+df1 = df%>%merge(frq, by=c('SNP', 'A1', 'A2'))
+df2 = df%>%rename(A1=A2, A2=A1)%>%mutate(BETA=-BETA)%>%merge(frq, by=c('SNP', 'A1', 'A2'))
+df_out = rbind(df1, df2)%>%select(SNP, CHR, POS, A1, A2, FRQ.y, BETA, SE, P, N)
+df_out <- df_out %>% rename(FRQ = FRQ.y)
+
+# 假设 frq 数据已正确加载和准备
+# 获取文件列表
+file_names <- list.files(file_in, full.names = TRUE, pattern = "\\.gz$")
+
+# 处理每个文件
+for (file_path in file_names) {
+  gwas <- fread(file_path)
+  # 数据处理
+  df <- gwas %>% filter(SNP %in% frq$SNP)
+  df1 <- df %>% merge(frq, by = c('SNP', 'A1', 'A2'))
+  df2 <- df %>% 
+    rename(A1 = A2, A2 = A1) %>%
+    mutate(BETA = -BETA) %>%
+    merge(frq, by = c('SNP', 'A1', 'A2'))
+  df_out <- rbind(df1, df2) %>% 
+    select(SNP, CHR, POS, A1, A2, FRQ.y, BETA, SE, P, N) %>%
+    rename(FRQ = FRQ.y)
+  # 输出文件路径
+  file_name <- basename(file_path)
+  file_out_path <- file.path(file_out_dir, gsub("tsv.gz$", "cleaned.txt", file_name))
+  # 保存文件并压缩
+  write.table(df_out, file_out_path, row.names = FALSE, quote = FALSE, sep = "\t")
+  gzfile_path <- paste0(file_out_path, ".gz")
+  gzcmd <- sprintf("gzip -f %s", shQuote(file_out_path))
+  system(gzcmd)
+  # 可选：清理内存
+  rm(df, df1, df2, df_out, gwas)
+  gc()
+}
+
+
+# 注意：这个脚本假设你的环境中已经安装并加载了所有必需的包（例如data.table, dplyr等）
+#!/bin/bash
+
+# 定义源目录和目标目录
+SOURCE_DIR="/data/db/gwas/lijq/cleaned"
+DEST_DIR="/data/db/gwas/lijq/cleaned/CVD"
+
+# 确保目标目录存在
+mkdir -p "$DEST_DIR"
+# 定义需要移动的文件模式列表
+declare -a patterns=(
+  "28067908-GCST004132-EFO_0000384-build37*"
+  "27527254-GCST003739-EFO_0000478-Build37*"
+  "34741163-GCST90016564-EFO_0000555-Build37*"
+  "GCST90255675_buildGRCh37_modified*"
+  "GORD_hg_UKB_modified*"
+  "GWAS_summary_1-23*"
+  "PUD_hg_UKB_modified*"
+  "28067908-GCST004133-EFO_0000729-build37*"
+)
+
+# 循环遍历每个模式并移动匹配的文件
+for pattern in "${patterns[@]}"; do
+# 使用 globbing 来匹配和移动文件
+mv "$SOURCE_DIR/$pattern" "$DEST_DIR"
+done
+
+echo "Files have been moved to $DEST_DIR."
+
+
+zcat /data/db/gwas/lijq/modified_N/ShahS_31919418_HeartFailure_modified.txt.tsv.gz  | head -n 5
+mv /data/db/gwas/lijq/raw_modified/ieu-a-798.txt.gz /data/db/gwas/lijq/modified_N/
+  #查看每个文件的前3行
+  for file in "$directory"*.gz; do
+echo "Contents of $file:"
+zcat "$file" | head -n 3 
+echo "--------------------------------"
+done
+
+# 计算文件数量 CAD 53(17+36)+GI 8
+dir_path <- "/data/db/gwas/lijq/modified_N/CVD"
+# Check if the directory exists
+if (!dir.exists(dir_path)) {
+  print("Directory does not exist.")
+} else {
+  # List all files in the directory
+  files <- list.files(dir_path)
+  # Count the number of files
+  num_files <- length(files)
+  # Print the number of files
+  print(paste("There are", num_files, "files in the directory."))
+}
+
+# 定义两个目录
+dir1 <- "/data/db/gwas/lijq/modified_N/"
+dir2 <- "/data/db/gwas/lijq/cleaned/"
+files_dir1 <- list.files(dir1)
+files_dir2 <- list.files(dir2)
+# 找出只在dir1中的文件
+unique_to_dir1 <- setdiff(files_dir1, files_dir2)
+# 打印结果
+cat("Files unique to", dir1, ":\n")
+print(unique_to_dir1)
+
+
+
+#!/bin/bash 将列出的文件从 /data/db/gwas/lijq/raw 目录移动到 /data/db/gwas/lijq/raw/CVD 目录中
+SOURCE_DIR="/data/db/gwas/lijq/modified_N"
+# 目标目录
+DEST_DIR="/data/db/gwas/lijq/modified_N/CVD"
+# 确保目标目录存在
+mkdir -p "$DEST_DIR"
+# 文件列表
+declare -a files=(
+  "26343387-GCST003116-EFO_0000378-build37.f_modified.tsv.tsv.gz"
+  "29531354-GCST005838-EFO_0000712-build37.f_modified.tsv.tsv.gz"
+  "29531354-GCST005840-EFO_0005524-build37.f_modified.tsv.tsv.gz"
+  "29531354-GCST005841-EFO_1001504-build37.f_modified.tsv.tsv.gz"
+  "29531354-GCST005842-EFO_1001976-build37.f_modified.tsv.tsv.gz"
+  "29531354-GCST005843-HP_0002140-build37.f_modified.tsv.tsv.gz"
+  "29531354-GCST006906-EFO_0000712-build37.f_modified.tsv.tsv.gz"
+  "29531354-GCST006907-EFO_0005524-build37.f_modified.tsv.tsv.gz"
+  "29531354-GCST006908-HP_0002140-build37.f_modified.tsv.tsv.gz"
+  "29531354-GCST006909-EFO_1001504-build37.f_modified.tsv.tsv.gz"
+  "29531354-GCST006910-EFO_1001976-build37.f_modified.tsv.tsv.gz"
+  "30061737-GCST006414-EFO_0000275-Build37.f_modified.tsv.tsv.gz"
+  "Evangelou_30224653_DBP_modified.txt.tsv.gz"
+  "Evangelou_30224653_PP_modified.txt.tsv.gz"
+  "Evangelou_30224653_SBP_modified.txt.tsv.gz"
+)
+# 循环遍历文件列表并移动每个文件
+for file in "${files[@]}"; do
+mv "$SOURCE_DIR/$file" "$DEST_DIR"
+done
+echo "Files have been moved to $DEST_DIR."
+
+
+# 源目录
+SOURCE_DIR="/data/db/gwas/lijq/modified_N"
+# 目标目录
+DEST_DIR="/data/db/gwas/lijq/modified_N/CVD"
+# 确保目标目录存在
+mkdir -p "$DEST_DIR"
+# 文件列表
+declare -a files=(
+  "ieu-a-798.txt.gz"
+  "ShahS_31919418_HeartFailure_modified.txt.tsv.gz"
+)
+# 循环遍历文件列表并移动每个文件
+for file in "${files[@]}"; do
+mv "$SOURCE_DIR/$file" "$DEST_DIR"
+done
+echo "Files have been moved to $DEST_DIR."
+
+
+# 遍历每个文件来检查 NA 值
+file_in <- "/data/db/gwas/lijq/cleaned/CVD"
+# 获取文件列表
+file_names <- list.files(file_in, full.names = TRUE, pattern = "\\.txt.gz$")  # 可以根据你的文件类型调整pattern
+# 初始化一个列表来存储结果
+na_check_results <- list()
+# 检查每个文件中的NA值
+for (file_path in file_names) {
+  # 读取文件
+  dt <- fread(file_path)
+  # 检查是否含有NA
+  any_na <- anyNA(dt)  # 返回 TRUE 如果有任何 NA 值，否则返回 FALSE
+  # 将结果存储在列表中
+  na_check_results[[basename(file_path)]] <- any_na
+}
+
+# 输出结果
+print(na_check_results)
