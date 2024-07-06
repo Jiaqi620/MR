@@ -1,0 +1,161 @@
+
+# ===============================================================================
+# METAL
+# ===============================================================================
+file_path <- "/data/db/gwas/lijq/cleaned/CVD/fin_I9_PHLETHROMBDVTLOW.txt.gz"
+data1 <- fread(file_path, header = TRUE)
+head(data1)
+# 重命名列名
+setnames(data1, old = c("A1", "A2", "FRQ", "P" ),
+         new = c("EFFECT-ALLELE", "NON_EFFECT_ALLELE", "EFFECT_ALLELE_FREQ", "P_VAL"))
+
+head(data1)
+
+output_file <- "/data/db/gwas/lijq/METAL/data/fin_I9_AVBLOCK.txt"
+fwrite(data1, output_file, sep = "\t", quote = FALSE)
+
+sum(selected_columns$pval < 5e-8)
+# 计算 p 列中小于 5e-8 的行数
+count_below_threshold1 <- sum(data1$P_VAL < 5e-8, na.rm = TRUE)
+# 打印结果
+print(count_below_threshold1)
+
+
+# trait 2
+file_path <- "/data/db/gwas/lijq/cleaned/GI/GWAS_summary_DD.cleaned.txt.gz"
+data3 <- fread(file_path, header = TRUE)
+head(data3)
+# 重命名列名
+setnames(data2, old = c("A1", "A2", "FRQ", "P" ),
+         new = c("EFFECT-ALLELE", "NON_EFFECT_ALLELE", "EFFECT_ALLELE_FREQ", "P_VAL"))
+head(data2)
+output_file <- "/data/db/gwas/lijq/METAL/data/28067908-GCST004133_UC.txt"
+fwrite(data2, output_file, sep = "\t", quote = FALSE)
+# 计算 p 列中小于 5e-8 的行数
+count_below_threshold2 <- sum(data2$P_VAL < 5e-8, na.rm = TRUE)
+# 打印结果
+print(count_below_threshold2)
+
+metal /data/db/gwas/lijq/METAL/metal_AS_DD.txt
+tar -zxvf Linux-metal.tar.gz
+cd generic-metal/
+  
+awk '{if (NR>1 && $8 < 5e-8) count++} END {print count+0}' metal_AVB_UC.TBL
+
+wget https://drive.usercontent.google.com/uc?id=1RWjk49QNZj9zvJHc9X_wyZ51fdy6xQjv&export=download
+# ===============================================================================
+# SMR
+# ===============================================================================
+library(data.table)
+data <- read.table("/data/db/gwas/lijq/generic-metal/metal_AS_DD.TBL", header = TRUE, sep = "\t")
+
+# 查看前几行数据
+head(data)
+
+# 计算 p 列中小于 5e-8 的行数
+count_below_threshold3 <- sum(data$P.value < 5e-8, na.rm = TRUE)
+# 打印结果
+print(count_below_threshold3)
+summary(data)
+setnames(data, old = c("MarkerName","Allele1", "Allele2","Freq1", "Effect", "StdErr", "P.value"), 
+         new = c("snp","A1", "A2","freq", "b", "se", "p"))
+data$n <- 815593
+head(data)
+# 选择指定的列
+selected_data <- data[, c("snp", "A1", "A2", "freq", "b", "se", "p","n")]
+head(selected_data)
+# 保存数据到文件
+output_file <- "/data/db/gwas/lijq/SMR/data/AS_DD_metal.txt"
+write.table(selected_data, file = output_file, sep = "\t", row.names = FALSE, quote = FALSE)
+file_check <- read.table(output_file, header = TRUE, sep = "\t", check.names = FALSE)
+head(file_check)
+
+
+file_path <- "/data/db/gwas/lijq/cleaned/CVD/fin_I9_AVBLOCK_0528.txt.gz"
+data <- fread(file_path)
+head(data)
+summary(data)
+setnames(data, old = c("SNP","FRQ", "BETA", "SE", "P"), new = c("snp","freq", "b", "se", "p"))
+names(data)[names(data) == "N"] <- "n"
+
+head(data)
+# 选择指定的列
+selected_data <- data[, c("snp", "A1", "A2", "freq", "b", "se", "p","n")]
+head(selected_data)
+# 保存数据到文件
+output_file <- "/data/db/gwas/lijq/SMR/data/fin_I9_AVBLOCK_0528.txt"
+write.table(selected_data, file = output_file, sep = "\t", row.names = FALSE, quote = FALSE)
+file_check <- read.table(output_file, header = TRUE, sep = "\t", check.names = FALSE)
+head(file_check)
+
+#AVBLOCK_SMR
+
+IN_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/all_tissue"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${IN_DIR}/all_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/AS_DD_metal_${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/AS_DD_metal.txt \
+--beqtl-summary ${IN_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+#AVBLOCK_UC_SMR
+IN_DIR="/data/db/gwas/lijq/SMR/GTEx_V8_cis_eqtl/all_tissue"
+OUT_DIR="/data/db/gwas/lijq/SMR/result"
+mkdir -p ${OUT_DIR}
+
+for BEQTL_FILE in ${IN_DIR}/all_*.besd; do
+BASENAME=$(basename "$BEQTL_FILE" .besd)
+OUTPUT="${OUT_DIR}/AVBLOCK_UC_0528${BASENAME}"
+
+/data/db/gwas/lijq/SMR//smr-1.3.1-linux-x86_64/smr-1.3.1 \
+--bfile /data/db/gwas/lijq/SMR/1000G/EUR \
+--gwas-summary /data/db/gwas/lijq/SMR/data/AVBLOCK_UC_0528_mtag_meta.txt \
+--beqtl-summary ${IN_DIR}/${BASENAME} \
+--out ${OUTPUT} \
+--thread-num 10 \
+--diff-freq-prop 0.2
+done
+
+# ===============================================================================
+# filter SMR result 
+# ===============================================================================
+path <- "/data/db/gwas/lijq/SMR/result"
+# 列出所有以"UC_0528all_"开头且以".smr"结尾的文件
+files <- list.files(path, pattern = "^UC_all_.*\\.smr$", full.names = TRUE)
+# 初始化一个空的数据框来存储合并后的数据
+all_data <- data.frame()
+
+# 读取并合并文件
+for (file in files) {
+  temp_data <- read.csv(file, sep = "\t", header = TRUE)  # 根据实际的分隔符和文件格式调整read.csv的参数
+  temp_data$SourceFile <- basename(file)
+  all_data <- rbind(all_data, temp_data)
+}
+head(all_data)
+all_data <- all_data %>%
+  mutate(p_SMR_FDR = p.adjust(p_SMR, method = "BH"))
+write.csv(all_data, "/data/db/gwas/lijq/SMR/result/combine/UC_alltissues_alldata0528.csv", row.names = FALSE)
+
+
+filtered_data <- all_data %>%
+  filter(nsnp_HEIDI >= 10 & p_HEIDI >= 0.01 & p_SMR_FDR < 0.05)
+# 查看筛选后的数据框头部数据
+head(filtered_data)
+nrow(filtered_data)
+# 如果需要，可以将结果保存为CSV文件
+write.csv(filtered_data, "/data/db/gwas/lijq/SMR/result/combine/UC_alltissues_alldata0528_filtered.csv", row.names = FALSE)
+
+
+#先看看mtag之前，两个trait各自多少个显著的snp，看看mtag之后多少个；
+#然后看看两个trait以及meta之后的trait smr多少个显著的
+
+
