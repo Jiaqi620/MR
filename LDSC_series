@@ -1,0 +1,196 @@
+#LDSC
+conda activate ldsc
+
+# 安装和加载必要的R包
+./ldsc.py -h
+./munge_sumstats.py -h
+# 1. 单个gwas
+input_data_path="/data/db/gwas/lijq/cleaned/GI/"
+# 设置输出文件夹路径
+output_path="/data/db/gwas/lijq/LDSC/GI/"
+
+/data/db/gwas/xiongzm/ldsc/munge_sumstats.py \
+--sumstats /data/db/gwas/lijq/cleaned/GI/PUD_hg_UKB_modified.cleaned.tsv.gz \
+--out /data/db/gwas/lijq/LDSC/GI/PUD_hg_UKB \
+--merge-alleles /data/db/sldsc_ref/eur_w_ld_chr/w_hm3.snplist \
+--chunksize 500000 
+# 计算回归截距和遗传度
+#bash
+/data/db/gwas/xiongzm/ldsc/ldsc.py \
+--h2 /data/db/gwas/lijq/LDSC/GI/PUD_hg_UKB.sumstats.gz \
+--ref-ld-chr /data/db/sldsc_ref/eur_w_ld_chr/ \
+--w-ld-chr /data/db/sldsc_ref/eur_w_ld_chr/ \
+--out /data/db/gwas/lijq/LDSC/GI/PUD_hg_UKB_h2
+
+# ================================================================================================
+#ldsc_GI
+# ================================================================================================
+input_data_path="/data/db/gwas/lijq/cleaned/GI/"
+# 设置输出文件夹路径
+output_path="/data/db/gwas/lijq/LDSC/GI/"
+# 遍历文件夹下的所有文件
+for input_file in "$input_data_path"*.gz; do
+file_name=$(basename -- "$input_file")
+file_name_no_ext="${file_name%.*}"
+cleaned_part="${file_name_no_ext%.cleaned*}"  # 提取到.cleaned之前的部分
+output_file_path="$output_path${cleaned_part}_h2.log"
+
+if [ ! -f "$output_file_path" ]; then
+# 使用munge_sumstats.py处理文件
+/data/db/gwas/xiongzm/ldsc/munge_sumstats.py \
+--sumstats "$input_file" \
+--out "$output_path$cleaned_part" \
+--merge-alleles /data/db/sldsc_ref/eur_w_ld_chr/w_hm3.snplist \
+--chunksize 500000
+
+# 使用ldsc.py计算回归截距和遗传度
+/data/db/gwas/xiongzm/ldsc/ldsc.py \
+--h2 "$output_path${cleaned_part}.sumstats.gz" \
+--ref-ld-chr /data/db/sldsc_ref/eur_w_ld_chr/ \
+--w-ld-chr /data/db/sldsc_ref/eur_w_ld_chr/ \
+--out "$output_path${cleaned_part}_h2"
+fi
+done
+
+# 合并所有结果
+library(stringr)
+directory <- "/data/db/gwas/lijq/LDSC/GI/"
+# 获取所有以_h2.log结尾的文件
+files <- list.files(directory, pattern = "_h2.log$", full.names = TRUE)
+# 初始化一个DataFrame来存储结果
+results <- data.frame(FileName = character(),
+                      SNPs = integer(),
+                      h2 = character(),
+                      Lambda_GC = numeric(),
+                      Intercept = character(),
+                      stringsAsFactors = FALSE)
+# 循环遍历文件提取信息
+for (file in files) {
+  lines <- readLines(file)
+  file_name <- basename(file)
+  # 提取SNPs数量
+  snps_line <- lines[grep("After merging with regression SNP LD", lines)]
+  snps <- as.integer(str_extract(snps_line, "\\d+(?= SNPs)"))
+  # 提取观察到的规模h2
+  h2_line <- lines[grep("Total Observed scale h2", lines)]
+  h2 <- str_trim(str_extract(h2_line, "\\d+\\.\\d+\\s+\\(\\d+\\.\\d+\\)"))
+  # 提取Lambda GC
+  lambda_gc_line <- lines[grep("Lambda GC", lines)]
+  lambda_gc <- as.numeric(str_extract(lambda_gc_line, "\\d+\\.\\d+"))
+  # 提取Intercept
+  intercept_line <- lines[grep("Intercept", lines)]
+  intercept <- str_trim(str_extract(intercept_line, "\\d+\\.\\d+\\s+\\(\\d+\\.\\d+\\)"))
+  # 将结果添加到DataFrame
+  results <- rbind(results, data.frame(FileName = file_name, SNPs = snps, h2 = h2, Lambda_GC = lambda_gc, Intercept = intercept))
+}
+write.csv(results, file = paste0(directory, "summary_results1.csv"), row.names = FALSE)
+# ================================================================================================
+#ldsc_CVD
+# ================================================================================================
+input_data_path="/data/db/gwas/lijq/cleaned/CVD/"
+# 设置输出文件夹路径
+output_path="/data/db/gwas/lijq/LDSC/CVD/"
+# 遍历文件夹下的所有文件
+for input_file in "$input_data_path"*.gz; do
+file_name=$(basename -- "$input_file")
+file_name_no_ext="${file_name%.*}"
+cleaned_part="${file_name_no_ext%.cleaned*}"  # 提取到.cleaned之前的部分
+output_file_path="$output_path${cleaned_part}_h2.log"
+
+if [ ! -f "$output_file_path" ]; then
+# 使用munge_sumstats.py处理文件
+/data/db/gwas/xiongzm/ldsc/munge_sumstats.py \
+--sumstats "$input_file" \
+--out "$output_path$cleaned_part" \
+--merge-alleles /data/db/sldsc_ref/eur_w_ld_chr/w_hm3.snplist \
+--chunksize 500000
+
+# 使用ldsc.py计算回归截距和遗传度
+/data/db/gwas/xiongzm/ldsc/ldsc.py \
+--h2 "$output_path${cleaned_part}.sumstats.gz" \
+--ref-ld-chr /data/db/sldsc_ref/eur_w_ld_chr/ \
+--w-ld-chr /data/db/sldsc_ref/eur_w_ld_chr/ \
+--out "$output_path${cleaned_part}_h2"
+fi
+done
+
+nohup Rscript /data/db/gwas/lijq/code/LDSC_forrun_ljq.R >output.log  2>&1 &
+  
+# 合并所有结果
+  directory <- "/data/db/gwas/lijq/LDSC/CVD/"
+# 获取所有以_h2.log结尾的文件
+files <- list.files(directory, pattern = "_h2.log$", full.names = TRUE)
+# 初始化一个DataFrame来存储结果
+results <- data.frame(FileName = character(),
+                      SNPs = integer(),
+                      h2 = character(),
+                      Lambda_GC = numeric(),
+                      Intercept = character(),
+                      stringsAsFactors = FALSE)
+# 循环遍历文件提取信息
+for (file in files) {
+  lines <- readLines(file)
+  file_name <- basename(file)
+  
+  # 提取SNPs数量
+  snps_line <- lines[grep("After merging with regression SNP LD", lines)]
+  if (length(snps_line) > 0) {
+    snps <- as.integer(str_extract(snps_line, "\\d+(?= SNPs)"))
+  } else {
+    snps <- NA  # 提供一个默认值
+  }
+  
+  # 提取观察到的规模h2
+  h2_line <- lines[grep("Total Observed scale h2", lines)]
+  if (length(h2_line) > 0) {
+    h2 <- str_trim(str_extract(h2_line, "\\d+\\.\\d+\\s+\\(\\d+\\.\\d+\\)"))
+  } else {
+    h2 <- NA  # 提供一个默认值
+  }
+  
+  # 提取Lambda GC
+  lambda_gc_line <- lines[grep("Lambda GC", lines)]
+  if (length(lambda_gc_line) > 0) {
+    lambda_gc <- as.numeric(str_extract(lambda_gc_line, "\\d+\\.\\d+"))
+  } else {
+    lambda_gc <- NA  # 提供一个默认值
+  }
+  
+  # 提取Intercept
+  intercept_line <- lines[grep("Intercept", lines)]
+  if (length(intercept_line) > 0) {
+    intercept <- str_trim(str_extract(intercept_line, "\\d+\\.\\d+\\s+\\(\\d+\\.\\d+\\)"))
+  } else {
+    intercept <- NA  # 提供一个默认值
+  }
+  
+  # 将结果添加到DataFrame
+  results <- rbind(results, data.frame(
+    FileName = file_name, 
+    SNPs = snps, 
+    h2 = h2, 
+    Lambda_GC = lambda_gc, 
+    Intercept = intercept
+  ))
+}
+
+directory <- "/data/db/gwas/lijq/LDSC/CVD/"
+
+write.csv(results, file = paste0(directory, "/LDSC_summary_results_CVD.csv"), row.names = FALSE)
+
+# 2. gwas对
+#!/bin/bash
+input_data_path="/data/db/gwas/lijq/LDSC/CVD/"
+output_path="/data/db/gwas/lijq/LDSC/GI_CVD/"
+#循环
+for input_file in "$input_data_path"*.sumstats.gz; do
+# 获取文件名（不含路径和扩展名）
+file_name=$(basename -- "$input_file")
+file_name_no_ext="${file_name%.*}"
+#使用ldsc.py计算遗传相关性
+/data/db/gwas/xiongzm/ldsc/ldsc.py \
+--rg /data/db/gwas/lijq/LDSC/GI/34741163-GCST90016564-EFO_0000555-Build37.f_modified.tsv.sumstats.gz,$input_file \
+--ref-ld-chr /data/db/sldsc_ref/eur_w_ld_chr/ \
+--w-ld-chr /data/db/sldsc_ref/eur_w_ld_chr/ \
+--out "$output_path$file_name_no_ext"_IBS
+done
